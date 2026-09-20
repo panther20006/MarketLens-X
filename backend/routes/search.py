@@ -21,7 +21,8 @@ from services.product_normalizer import (
 )
 
 from services.requirement_parser import (
-    parse_requirements
+    parse_requirements,
+    build_shopping_query
 )
 
 from services.ranking_engine import (
@@ -30,6 +31,10 @@ from services.ranking_engine import (
 
 from services.review_analyzer import (
     analyze_reviews
+)
+
+from services.platform_comparator import (
+    get_platform_comparison
 )
 
 from database import save_search
@@ -54,7 +59,6 @@ def search():
         or {}
     )
 
-
     query = (
         data.get(
             "query",
@@ -62,7 +66,6 @@ def search():
         )
         .strip()
     )
-
 
     if not query:
 
@@ -74,7 +77,6 @@ def search():
                 "Search query is required"
 
         }), 400
-
 
     try:
 
@@ -88,78 +90,26 @@ def search():
 
 
         # --------------------------------
-        # 2. Build Shopping query
+        # 2. Build Shopping Query
         # --------------------------------
+        #
+        # IMPORTANT:
+        # Old code was converting:
+        #
+        # iPhone 15 128GB
+        #
+        # into:
+        #
+        # Phone
+        #
+        # Now we preserve the actual
+        # product/model query.
+        #
 
-        shopping_parts = []
-
-
-        category = requirements.get(
-            "category"
+        shopping_query = build_shopping_query(
+            query,
+            requirements
         )
-
-        brand = requirements.get(
-            "brand"
-        )
-
-        gpu = requirements.get(
-            "gpu"
-        )
-
-        ram = requirements.get(
-            "ram_gb"
-        )
-
-        storage = requirements.get(
-            "storage_gb"
-        )
-
-
-        if category:
-
-            shopping_parts.append(
-                category
-            )
-
-
-        if brand:
-
-            shopping_parts.append(
-                brand
-            )
-
-
-        if gpu:
-
-            shopping_parts.append(
-                gpu
-            )
-
-
-        if ram:
-
-            shopping_parts.append(
-                f"{ram}GB RAM"
-            )
-
-
-        if storage:
-
-            shopping_parts.append(
-                f"{storage}GB storage"
-            )
-
-
-        if shopping_parts:
-
-            shopping_query = " ".join(
-                shopping_parts
-            )
-
-        else:
-
-            shopping_query = query
-
 
         shopping_query = (
             shopping_query.strip()
@@ -235,8 +185,14 @@ def search():
         )
 
 
+        # --------------------------------
+        # 9. Select market data
+        # --------------------------------
+        #
         # Use comparable market average
         # when available.
+        #
+
         insight_market_data = (
             comparable_price_data
             if comparable_price_data.get(
@@ -247,7 +203,7 @@ def search():
 
 
         # --------------------------------
-        # 9. Product intelligence
+        # 10. Product intelligence
         # --------------------------------
 
         for product in ranked_products:
@@ -284,7 +240,7 @@ def search():
 
 
         # --------------------------------
-        # 10. Market summary
+        # 11. Market summary
         # --------------------------------
 
         market_summary = (
@@ -301,7 +257,31 @@ def search():
 
 
         # --------------------------------
-        # 11. Save search
+        # 12. Platform Comparison
+        # --------------------------------
+        #
+        # Compare actual platforms returned
+        # by SerpApi.
+        #
+        # Example:
+        #
+        # Amazon
+        # Flipkart
+        # Croma
+        # Reliance Digital
+        #
+        # We DO NOT invent platforms.
+        #
+
+        platform_comparison = (
+            get_platform_comparison(
+                ranked_products
+            )
+        )
+
+
+        # --------------------------------
+        # 13. Save search
         # --------------------------------
 
         try:
@@ -316,7 +296,7 @@ def search():
 
 
         # --------------------------------
-        # 12. Response
+        # 14. Response
         # --------------------------------
 
         return jsonify({
@@ -353,6 +333,9 @@ def search():
 
             "market_summary":
                 market_summary,
+
+            "platform_comparison":
+                platform_comparison,
 
             "results":
                 ranked_products

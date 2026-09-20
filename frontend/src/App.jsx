@@ -5,6 +5,7 @@ import "./app.css";
 const API_URL =
   import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 
+
 /* =========================================================
    NAVBAR
 ========================================================= */
@@ -26,6 +27,7 @@ function Navbar({ page, setPage }) {
         </div>
       </div>
 
+
       <div className="nav-links">
 
         <button
@@ -39,6 +41,7 @@ function Navbar({ page, setPage }) {
           Home
         </button>
 
+
         <button
           className={
             page === "dashboard"
@@ -50,6 +53,7 @@ function Navbar({ page, setPage }) {
           Dashboard
         </button>
 
+
         <button
           className={
             page === "results"
@@ -60,6 +64,7 @@ function Navbar({ page, setPage }) {
         >
           Results
         </button>
+
 
         <button
           className={
@@ -73,6 +78,7 @@ function Navbar({ page, setPage }) {
         </button>
 
       </div>
+
 
       <div className="backend-online">
         <span className="online-dot"></span>
@@ -94,6 +100,7 @@ function SearchBox({ onSearch, loading }) {
     "16GB RAM laptop under 60000"
   );
 
+
   const examples = [
     "Gaming Laptop",
     "16GB RAM",
@@ -101,15 +108,20 @@ function SearchBox({ onSearch, loading }) {
     "RTX 4050"
   ];
 
+
   function submitSearch(e) {
+
     e.preventDefault();
+
 
     if (!query.trim() || loading) {
       return;
     }
 
+
     onSearch(query.trim());
   }
+
 
   function exampleSearch(value) {
 
@@ -117,9 +129,11 @@ function SearchBox({ onSearch, loading }) {
       return;
     }
 
+
     setQuery(value);
     onSearch(value);
   }
+
 
   return (
     <div className="search-panel">
@@ -133,6 +147,7 @@ function SearchBox({ onSearch, loading }) {
           🔍
         </div>
 
+
         <input
           className="search-input"
           type="text"
@@ -143,6 +158,7 @@ function SearchBox({ onSearch, loading }) {
           placeholder="Search products..."
           disabled={loading}
         />
+
 
         <button
           type="submit"
@@ -156,13 +172,16 @@ function SearchBox({ onSearch, loading }) {
 
       </form>
 
+
       <div className="try-row">
 
         <span className="try-label">
           Try:
         </span>
 
+
         {examples.map((item) => (
+
           <button
             key={item}
             type="button"
@@ -174,6 +193,7 @@ function SearchBox({ onSearch, loading }) {
           >
             {item}
           </button>
+
         ))}
 
       </div>
@@ -198,8 +218,10 @@ function Home({
       return;
     }
 
+
     onSearch(query);
   };
+
 
   const focusSearch = () => {
 
@@ -208,15 +230,20 @@ function Home({
         ".search-input"
       );
 
+
     if (input) {
+
       input.focus();
+
 
       input.scrollIntoView({
         behavior: "smooth",
         block: "center"
       });
+
     }
   };
+
 
   return (
     <main className="home-page">
@@ -228,15 +255,19 @@ function Home({
         <div className="hero-content">
 
           <h1>
+
             Search
             <br />
+
             Smarter.
             <br />
 
             <span>
               Buy Better.
             </span>
+
           </h1>
+
 
           <p>
             MarketLens X analyzes products,
@@ -247,6 +278,7 @@ function Home({
 
         </div>
 
+
         <SearchBox
           onSearch={onSearch}
           loading={loading}
@@ -255,7 +287,7 @@ function Home({
       </section>
 
 
-      {/* FEATURE CARDS */}
+      {/* FEATURES */}
 
       <section className="features">
 
@@ -266,6 +298,7 @@ function Home({
           color="purple"
           onClick={focusSearch}
         />
+
 
         <FeatureCard
           icon="◎"
@@ -279,6 +312,7 @@ function Home({
           }
         />
 
+
         <FeatureCard
           icon="▤"
           title="Price Intelligence"
@@ -290,6 +324,7 @@ function Home({
             )
           }
         />
+
 
         <FeatureCard
           icon="✦"
@@ -334,8 +369,10 @@ function FeatureCard({
           e.key === "Enter" ||
           e.key === " "
         ) {
+
           e.preventDefault();
           onClick();
+
         }
 
       }}
@@ -345,11 +382,13 @@ function FeatureCard({
         {icon}
       </div>
 
+
       <div className="feature-content">
 
         <h3>
           {title}
         </h3>
+
 
         <p>
           {text}
@@ -357,11 +396,317 @@ function FeatureCard({
 
       </div>
 
+
       <div className="feature-arrow">
         →
       </div>
 
     </div>
+  );
+}
+
+
+/* =========================================================
+   PLATFORM COMPARISON
+========================================================= */
+
+function PlatformComparison({
+  comparison
+}) {
+
+  if (
+    !comparison ||
+    !comparison.platforms ||
+    comparison.platforms.length === 0
+  ) {
+    return null;
+  }
+
+
+  const platforms =
+    comparison.platforms;
+
+
+  const lowestPrice =
+    comparison.lowest_price;
+
+
+  return (
+    <section className="platform-section">
+
+      {/* HEADER */}
+
+      <div className="section-heading">
+
+        <div>
+
+          <div className="section-kicker">
+            PRICE INTELLIGENCE
+          </div>
+
+
+          <h2>
+            Platform Comparison
+          </h2>
+
+
+          <p>
+            Compare prices from the platforms
+            returned by the search.
+          </p>
+
+        </div>
+
+
+        {lowestPrice !== null &&
+          lowestPrice !== undefined && (
+
+            <div className="lowest-price">
+
+              Lowest ₹
+              {Number(
+                lowestPrice
+              ).toLocaleString("en-IN")}
+
+            </div>
+
+          )}
+
+      </div>
+
+
+      {/* PLATFORM CARDS */}
+
+      <div className="platform-grid">
+
+        {platforms.map(
+          (item, index) => {
+
+            const price =
+              Number(item.price);
+
+
+            const priceDifference =
+              Number(
+                item.price_difference || 0
+              );
+
+
+            return (
+              <div
+                className="platform-card"
+                key={
+                  `${item.platform}-${index}`
+                }
+              >
+
+                {/* TOP */}
+
+                <div className="platform-top">
+
+                  <div>
+
+                    <div className="platform-name">
+                      {item.platform}
+                    </div>
+
+
+                    <div className="platform-product">
+
+                      {item.title ||
+                        "Product"}
+
+                    </div>
+
+                  </div>
+
+
+                  {index === 0 && (
+
+                    <span className="best-price-badge">
+                      LOWEST
+                    </span>
+
+                  )}
+
+                </div>
+
+
+                {/* PRICE */}
+
+                <div className="platform-price">
+
+                  ₹
+                  {price.toLocaleString(
+                    "en-IN"
+                  )}
+
+                </div>
+
+
+                {/* PRICE DIFFERENCE */}
+
+                {priceDifference > 0 && (
+
+                  <div className="price-difference">
+
+                    ₹
+                    {priceDifference.toLocaleString(
+                      "en-IN"
+                    )}
+                    {" "}
+                    more than lowest
+
+                  </div>
+
+                )}
+
+
+                {priceDifference === 0 && (
+
+                  <div className="price-difference">
+
+                    Lowest available price
+
+                  </div>
+
+                )}
+
+
+                {/* PRODUCT SPECS */}
+
+                <div className="platform-specs">
+
+                  <div>
+
+                    <span>
+                      RAM
+                    </span>
+
+
+                    <strong>
+                      {item.ram_gb
+                        ? `${item.ram_gb} GB`
+                        : "—"}
+                    </strong>
+
+                  </div>
+
+
+                  <div>
+
+                    <span>
+                      Storage
+                    </span>
+
+
+                    <strong>
+                      {item.storage_gb
+                        ? `${item.storage_gb} GB`
+                        : "—"}
+                    </strong>
+
+                  </div>
+
+
+                  <div>
+
+                    <span>
+                      GPU
+                    </span>
+
+
+                    <strong>
+                      {item.gpu || "—"}
+                    </strong>
+
+                  </div>
+
+                </div>
+
+
+                {/* RATING */}
+
+                <div className="platform-meta">
+
+                  {item.rating !== null &&
+                    item.rating !== undefined && (
+
+                      <span>
+                        ⭐ {item.rating}
+                      </span>
+
+                    )}
+
+
+                  {item.reviews !== null &&
+                    item.reviews !== undefined && (
+
+                      <span>
+
+                        {Number(
+                          item.reviews
+                        ).toLocaleString(
+                          "en-IN"
+                        )}
+
+                        {" "}
+                        reviews
+
+                      </span>
+
+                    )}
+
+                </div>
+
+
+                {/* STORE */}
+
+                {item.store && (
+
+                  <div className="platform-store">
+
+                    Store:
+                    {" "}
+                    {item.store}
+
+                  </div>
+
+                )}
+
+
+                {/* DEAL BUTTON */}
+
+                {item.link ? (
+
+                  <a
+                    className="deal-button"
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View Deal →
+                  </a>
+
+                ) : (
+
+                  <button
+                    className="deal-button disabled"
+                    disabled
+                  >
+                    Deal Link Unavailable
+                  </button>
+
+                )}
+
+              </div>
+            );
+          }
+        )}
+
+      </div>
+
+    </section>
   );
 }
 
@@ -387,13 +732,16 @@ function Results({
             🔎
           </div>
 
+
           <h2>
             No Search Yet
           </h2>
 
+
           <p>
             Go to Home and search for a product.
           </p>
+
 
           <button
             className="primary-button"
@@ -408,8 +756,10 @@ function Results({
     );
   }
 
+
   const results =
     data.results || [];
+
 
   return (
     <main className="page">
@@ -424,17 +774,24 @@ function Results({
             SEARCH RESULTS
           </div>
 
+
           <h2>
             {query}
           </h2>
 
+
           <p>
+
             {data.unique_count ||
-              results.length}{" "}
+              results.length}
+
+            {" "}
             unique products found
+
           </p>
 
         </div>
+
 
         <button
           className="secondary-button"
@@ -444,6 +801,26 @@ function Results({
         </button>
 
       </div>
+
+
+      {/* SEARCH QUERY INFO */}
+
+      {data.shopping_query && (
+
+        <div className="search-query-info">
+
+          <span>
+            Shopping Search:
+          </span>
+
+
+          <strong>
+            {data.shopping_query}
+          </strong>
+
+        </div>
+
+      )}
 
 
       {/* SUMMARY */}
@@ -458,6 +835,7 @@ function Results({
           }
         />
 
+
         <SummaryBox
           title="Unique"
           value={
@@ -466,6 +844,7 @@ function Results({
           }
         />
 
+
         <SummaryBox
           title="Verified"
           value={
@@ -473,6 +852,7 @@ function Results({
               ?.verified_matches ?? 0
           }
         />
+
 
         <SummaryBox
           title="Needs Verification"
@@ -485,48 +865,93 @@ function Results({
       </div>
 
 
-      {/* PRODUCTS */}
+      {/* =====================================================
+          PRODUCT DETAILS / PRODUCT RESULTS
+          FIRST
+      ===================================================== */}
 
-      <div className="products-grid">
+      <section className="products-section">
 
-        {results.length === 0 ? (
+        <div className="section-heading">
 
-          <div className="empty-page">
+          <div>
 
-            <div className="empty-icon">
-              📦
+            <div className="section-kicker">
+              PRODUCT INTELLIGENCE
             </div>
 
+
             <h2>
-              No Products Found
+              Product Details
             </h2>
 
+
             <p>
-              Try another search query.
+              Products matching your search
+              requirements.
             </p>
 
           </div>
 
-        ) : (
+        </div>
 
-          results.map(
-            (product, index) => (
 
-              <ProductCard
-                key={
-                  product.id ||
-                  product.product_id ||
-                  index
-                }
-                product={product}
-              />
+        <div className="products-grid">
 
+          {results.length === 0 ? (
+
+            <div className="empty-page">
+
+              <div className="empty-icon">
+                📦
+              </div>
+
+
+              <h2>
+                No Products Found
+              </h2>
+
+
+              <p>
+                Try another search query.
+              </p>
+
+            </div>
+
+          ) : (
+
+            results.map(
+              (product, index) => (
+
+                <ProductCard
+                  key={
+                    product.id ||
+                    product.product_id ||
+                    index
+                  }
+                  product={product}
+                />
+
+              )
             )
-          )
 
-        )}
+          )}
 
-      </div>
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          PLATFORM COMPARISON
+          AFTER PRODUCT DETAILS
+      ===================================================== */}
+
+      <PlatformComparison
+        comparison={
+          data.platform_comparison
+        }
+      />
 
     </main>
   );
@@ -549,6 +974,7 @@ function SummaryBox({
         {title}
       </span>
 
+
       <strong>
         {value}
       </strong>
@@ -569,13 +995,16 @@ function ProductCard({
   const intelligence =
     product.intelligence || {};
 
+
   const status =
     intelligence.match_status ||
     product.match_status ||
     "Needs Verification";
 
+
   let statusClass =
     "warning";
+
 
   if (
     status === "Verified Match"
@@ -583,26 +1012,31 @@ function ProductCard({
     statusClass = "verified";
   }
 
+
   if (
     status === "Does Not Match"
   ) {
     statusClass = "failed";
   }
 
+
   const image =
     product.image ||
     product.thumbnail ||
     product.image_url;
+
 
   const title =
     product.title ||
     product.name ||
     "Unknown Product";
 
+
   const price =
     product.price ??
     product.extracted_price ??
     "Price unavailable";
+
 
   return (
     <div className="product-card">
@@ -634,15 +1068,23 @@ function ProductCard({
 
       <div className="product-content">
 
+        {/* STATUS */}
+
         <div
           className={`status ${statusClass}`}
         >
           {status}
         </div>
 
+
+        {/* TITLE */}
+
         <h3>
           {title}
         </h3>
+
+
+        {/* PRICE */}
 
         <div className="product-price">
 
@@ -660,52 +1102,65 @@ function ProductCard({
         <div className="product-info">
 
           <div>
+
             <span>
               RAM
             </span>
+
 
             <strong>
               {product.ram ||
                 product.ram_gb ||
                 "—"}
             </strong>
+
           </div>
 
 
           <div>
+
             <span>
               GPU
             </span>
+
 
             <strong>
               {product.gpu ||
                 "—"}
             </strong>
+
           </div>
 
 
           <div>
+
             <span>
               Storage
             </span>
+
 
             <strong>
               {product.storage ||
                 product.storage_gb ||
                 "—"}
             </strong>
+
           </div>
 
 
           <div>
+
             <span>
               Source
             </span>
 
+
             <strong>
               {product.source ||
+                product.store ||
                 "Shopping"}
             </strong>
+
           </div>
 
         </div>
@@ -713,11 +1168,15 @@ function ProductCard({
 
         {/* PRODUCT LINK */}
 
-        {product.product_link && (
+        {(product.product_link ||
+          product.link) && (
 
           <a
             className="product-button"
-            href={product.product_link}
+            href={
+              product.product_link ||
+              product.link
+            }
             target="_blank"
             rel="noreferrer"
           >
@@ -750,9 +1209,11 @@ function Dashboard({
           MARKETLENS X
         </div>
 
+
         <h2>
           Dashboard
         </h2>
+
 
         <p>
           Product search intelligence overview.
@@ -773,6 +1234,7 @@ function Dashboard({
           }
         />
 
+
         <DashboardCard
           icon="📦"
           title="Products"
@@ -781,6 +1243,7 @@ function Dashboard({
             "0"
           }
         />
+
 
         <DashboardCard
           icon="✓"
@@ -791,6 +1254,7 @@ function Dashboard({
             "0"
           }
         />
+
 
         <DashboardCard
           icon="₹"
@@ -813,6 +1277,7 @@ function Dashboard({
           How MarketLens X works
         </h3>
 
+
         <div className="workflow">
 
           <Workflow
@@ -821,17 +1286,20 @@ function Dashboard({
             text="Enter a natural language product requirement."
           />
 
+
           <Workflow
             number="02"
             title="Analyze"
             text="MarketLens processes products and specifications."
           />
 
+
           <Workflow
             number="03"
             title="Compare"
             text="Compare prices, requirements and product quality."
           />
+
 
           <Workflow
             number="04"
@@ -865,9 +1333,11 @@ function DashboardCard({
         {icon}
       </div>
 
+
       <span>
         {title}
       </span>
+
 
       <strong>
         {value}
@@ -895,9 +1365,11 @@ function Workflow({
         {number}
       </div>
 
+
       <h4>
         {title}
       </h4>
+
 
       <p>
         {text}
@@ -919,6 +1391,7 @@ function Compare({
   const products =
     data?.results?.slice(0, 4) || [];
 
+
   return (
     <main className="page">
 
@@ -928,9 +1401,11 @@ function Compare({
           PRODUCT INTELLIGENCE
         </div>
 
+
         <h2>
           Compare Products
         </h2>
+
 
         <p>
           Compare products returned from
@@ -948,9 +1423,11 @@ function Compare({
             ⚖️
           </div>
 
+
           <h2>
             Nothing to Compare
           </h2>
+
 
           <p>
             Search for products first.
@@ -971,6 +1448,7 @@ function Compare({
                 <th>
                   Specification
                 </th>
+
 
                 {products.map(
                   (product, index) => (
@@ -1002,14 +1480,19 @@ function Compare({
                   Price
                 </td>
 
+
                 {products.map(
                   (p, i) => (
 
                     <td key={i}>
 
-                      {p.price ||
-                        p.extracted_price ||
-                        "—"}
+                      {typeof p.price === "number"
+                        ? `₹${p.price.toLocaleString(
+                            "en-IN"
+                          )}`
+                        : p.price ||
+                          p.extracted_price ||
+                          "—"}
 
                     </td>
 
@@ -1026,6 +1509,7 @@ function Compare({
                 <td>
                   RAM
                 </td>
+
 
                 {products.map(
                   (p, i) => (
@@ -1052,6 +1536,7 @@ function Compare({
                   GPU
                 </td>
 
+
                 {products.map(
                   (p, i) => (
 
@@ -1076,6 +1561,7 @@ function Compare({
                   Storage
                 </td>
 
+
                 {products.map(
                   (p, i) => (
 
@@ -1093,6 +1579,32 @@ function Compare({
               </tr>
 
 
+              {/* SOURCE */}
+
+              <tr>
+
+                <td>
+                  Source
+                </td>
+
+
+                {products.map(
+                  (p, i) => (
+
+                    <td key={i}>
+
+                      {p.source ||
+                        p.store ||
+                        "—"}
+
+                    </td>
+
+                  )
+                )}
+
+              </tr>
+
+
               {/* STATUS */}
 
               <tr>
@@ -1100,6 +1612,7 @@ function Compare({
                 <td>
                   Match Status
                 </td>
+
 
                 {products.map(
                   (p, i) => (
@@ -1140,11 +1653,14 @@ function App() {
   const [page, setPage] =
     useState("home");
 
+
   const [loading, setLoading] =
     useState(false);
 
+
   const [data, setData] =
     useState(null);
+
 
   const [query, setQuery] =
     useState("");
@@ -1165,11 +1681,14 @@ function App() {
       return;
     }
 
+
     setLoading(true);
+
 
     setQuery(
       searchQuery.trim()
     );
+
 
     try {
 
@@ -1209,6 +1728,7 @@ function App() {
 
       setData(result);
 
+
       setPage("results");
 
 
@@ -1230,6 +1750,7 @@ function App() {
         "MarketLens Search Error:",
         error
       );
+
 
       alert(
         `Search failed: ${error.message}`

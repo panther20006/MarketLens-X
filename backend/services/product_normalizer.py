@@ -6,7 +6,6 @@ import re
 # =========================================================
 
 def clean_price(price):
-
     if price is None:
         return None
 
@@ -18,7 +17,7 @@ def clean_price(price):
     if not text:
         return None
 
-    # Remove currency symbols but keep digits, comma and decimal
+    # Remove currency symbols but keep digits, comma, decimal and minus
     text = re.sub(r"[^\d,.\-]", "", text)
 
     if not text:
@@ -30,13 +29,11 @@ def clean_price(price):
     #
     # Normal decimal:
     # 69999.99 -> 69999.99
-
     if "," in text:
         text = text.replace(",", "")
 
     try:
         return float(text)
-
     except ValueError:
         return None
 
@@ -46,7 +43,6 @@ def clean_price(price):
 # =========================================================
 
 def clean_rating(rating):
-
     if rating is None:
         return None
 
@@ -67,7 +63,6 @@ def clean_rating(rating):
 # =========================================================
 
 def clean_reviews(reviews):
-
     if reviews is None:
         return None
 
@@ -89,12 +84,10 @@ def clean_reviews(reviews):
     )
 
     if match:
-
         try:
             return int(
                 float(match.group(1)) * 1000
             )
-
         except ValueError:
             pass
 
@@ -105,12 +98,10 @@ def clean_reviews(reviews):
     )
 
     if match:
-
         try:
             return int(
                 float(match.group(1)) * 1000000
             )
-
         except ValueError:
             pass
 
@@ -120,10 +111,8 @@ def clean_reviews(reviews):
     )
 
     if match:
-
         try:
             return int(match.group())
-
         except ValueError:
             return None
 
@@ -135,27 +124,113 @@ def clean_reviews(reviews):
 # =========================================================
 
 def safe_text(value):
-
     if value is None:
         return ""
 
     return str(value).strip()
 
 
-def combined_product_text(product):
+def flatten_value(value):
+    """
+    Convert nested SerpApi data into searchable text.
 
-    parts = [
-        product.get("title"),
-        product.get("description"),
-        product.get("snippet"),
-        product.get("product_description"),
-        product.get("specifications"),
+    Handles:
+    - string
+    - number
+    - list
+    - tuple
+    - dictionary
+    """
+
+    if value is None:
+        return []
+
+    if isinstance(value, (str, int, float)):
+        return [str(value)]
+
+    if isinstance(value, dict):
+        result = []
+
+        for key, item in value.items():
+            result.append(str(key))
+            result.extend(flatten_value(item))
+
+        return result
+
+    if isinstance(value, (list, tuple)):
+        result = []
+
+        for item in value:
+            result.extend(flatten_value(item))
+
+        return result
+
+    return [str(value)]
+
+
+def combined_product_text(product):
+    """
+    Build one large searchable text from the complete
+    SerpApi product response.
+
+    This helps extract RAM, storage, GPU, CPU, etc.
+    even when the information is inside extensions,
+    details, features or nested objects.
+    """
+
+    parts = []
+
+    important_fields = [
+        "title",
+        "description",
+        "snippet",
+        "product_description",
+        "specifications",
+        "extensions",
+        "details",
+        "features",
+        "highlights",
+        "product_details",
+        "attributes",
+        "variants",
+        "name",
     ]
+
+    for field in important_fields:
+        if field in product:
+            parts.extend(
+                flatten_value(product.get(field))
+            )
+
+    # Also inspect other textual/list/dict fields
+    # returned by SerpApi.
+    ignored_fields = {
+        "price",
+        "extracted_price",
+        "rating",
+        "reviews",
+        "thumbnail",
+        "link",
+        "product_id",
+    }
+
+    for key, value in product.items():
+
+        if key in ignored_fields:
+            continue
+
+        if isinstance(
+            value,
+            (str, int, float, list, tuple, dict)
+        ):
+            parts.extend(
+                flatten_value(value)
+            )
 
     return " ".join(
         safe_text(part)
         for part in parts
-        if part
+        if safe_text(part)
     )
 
 
@@ -164,7 +239,6 @@ def combined_product_text(product):
 # =========================================================
 
 def extract_ram(text):
-
     if not text:
         return None
 
@@ -186,6 +260,9 @@ def extract_ram(text):
 
         # Memory: 16GB
         r"\bMemory\s*[:\-]?\s*(\d{1,3})\s*GB\b",
+
+        # 16GB RAM Memory
+        r"\b(\d{1,3})\s*GB\s*RAM\s*Memory\b",
     ]
 
     for pattern in patterns:
@@ -197,9 +274,7 @@ def extract_ram(text):
         )
 
         if match:
-
             try:
-
                 value = int(
                     match.group(1)
                 )
@@ -219,25 +294,127 @@ def extract_ram(text):
 # =========================================================
 
 def extract_storage(text):
+    """
+    Extract storage capacity in GB.
+
+    Examples:
+
+    512GB SSD       -> 512
+    1TB SSD         -> 1024
+    2TB HDD         -> 2048
+    256GB Pendrive  -> 256
+    32GB Pen Drive  -> 32
+    128GB USB       -> 128
+    Storage: 512GB  -> 512
+    Capacity 1TB    -> 1024
+    """
 
     if not text:
         return None
 
     text = str(text)
 
+    # Normalize common separators
+    text = re.sub(
+        r"[\u2013\u2014]",
+        "-",
+        text
+    )
+
     patterns = [
 
-        # 1TB SSD / 1 TB Storage / 1TB HDD
-        r"\b(\d+(?:\.\d+)?)\s*TB\s*(?:SSD|Storage|HDD)\b",
+        # -------------------------------------------------
+        # SSD / HDD / NVMe
+        # -------------------------------------------------
 
-        # 512GB SSD / 512 GB Storage / 512GB HDD
-        r"\b(\d+(?:\.\d+)?)\s*GB\s*(?:SSD|Storage|HDD)\b",
+        # 1TB SSD
+        # 1 TB SSD
+        # 2TB HDD
+        # 1TB NVMe
+        r"\b(\d+(?:\.\d+)?)\s*TB\s*(?:SSD|HDD|NVMe|NVME|M\.2)\b",
 
-        # SSD: 1TB
-        r"\b(?:SSD|Storage|HDD)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*TB\b",
+        # 512GB SSD
+        # 512 GB SSD
+        # 256GB HDD
+        # 512GB NVMe
+        r"\b(\d+(?:\.\d+)?)\s*GB\s*(?:SSD|HDD|NVMe|NVME|M\.2)\b",
 
-        # SSD: 512GB
-        r"\b(?:SSD|Storage|HDD)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*GB\b",
+        # SSD 512GB
+        # HDD 1TB
+        # NVMe 512GB
+        r"\b(?:SSD|HDD|NVMe|NVME|M\.2)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*GB\b",
+
+        # SSD 1TB
+        # HDD 2TB
+        r"\b(?:SSD|HDD|NVMe|NVME|M\.2)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*TB\b",
+
+        # -------------------------------------------------
+        # STORAGE / CAPACITY
+        # -------------------------------------------------
+
+        # Storage: 512GB
+        # Storage 512GB
+        # Capacity: 1TB
+        r"\b(?:Storage|Capacity)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*GB\b",
+
+        r"\b(?:Storage|Capacity)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*TB\b",
+
+        # 512GB Storage
+        # 1TB Storage
+        r"\b(\d+(?:\.\d+)?)\s*GB\s*(?:Storage|Capacity)\b",
+
+        r"\b(\d+(?:\.\d+)?)\s*TB\s*(?:Storage|Capacity)\b",
+
+        # -------------------------------------------------
+        # PEN DRIVE / USB
+        # -------------------------------------------------
+
+        # 256GB Pendrive
+        # 32GB Pen Drive
+        # 128GB USB Drive
+        # 64GB Flash Drive
+        r"\b(\d+(?:\.\d+)?)\s*GB\s*(?:Pen\s*Drive|Pendrive|USB\s*Drive|USB|Flash\s*Drive)\b",
+
+        # 256GB PenDrive
+        r"\b(\d+(?:\.\d+)?)\s*GB\s*(?:PenDrive|Pendrive)\b",
+
+        # Pen Drive 256GB
+        # Pendrive 32GB
+        # USB Drive 128GB
+        r"\b(?:Pen\s*Drive|Pendrive|USB\s*Drive|Flash\s*Drive)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*GB\b",
+
+        # -------------------------------------------------
+        # EXTERNAL / PORTABLE DRIVE
+        # -------------------------------------------------
+
+        # 1TB External Drive
+        # 2TB Portable Drive
+        r"\b(\d+(?:\.\d+)?)\s*TB\s*(?:External\s+Drive|Portable\s+Drive)\b",
+
+        # 500GB External Drive
+        r"\b(\d+(?:\.\d+)?)\s*GB\s*(?:External\s+Drive|Portable\s+Drive)\b",
+
+        # External Drive 1TB
+        r"\b(?:External\s+Drive|Portable\s+Drive)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*TB\b",
+
+        # External Drive 500GB
+        r"\b(?:External\s+Drive|Portable\s+Drive)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*GB\b",
+
+        # -------------------------------------------------
+        # GENERIC "DISK"
+        # -------------------------------------------------
+
+        # 512GB Disk
+        # 1TB Disk
+        r"\b(\d+(?:\.\d+)?)\s*GB\s*(?:Disk|Drive)\b",
+
+        r"\b(\d+(?:\.\d+)?)\s*TB\s*(?:Disk|Drive)\b",
+
+        # Disk 512GB
+        # Drive 1TB
+        r"\b(?:Disk|Drive)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*GB\b",
+
+        r"\b(?:Disk|Drive)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*TB\b",
     ]
 
     for pattern in patterns:
@@ -252,17 +429,20 @@ def extract_storage(text):
             continue
 
         try:
-
             value = float(
                 match.group(1)
             )
 
-            if "TB" in match.group(0).upper():
+            matched_text = match.group(0).upper()
+
+            if "TB" in matched_text:
                 value *= 1024
 
-            return int(value)
+            # Ignore unrealistic values
+            if 1 <= value <= 32768:
+                return int(value)
 
-        except ValueError:
+        except (ValueError, TypeError):
             pass
 
     return None
@@ -273,7 +453,6 @@ def extract_storage(text):
 # =========================================================
 
 def extract_gpu(text):
-
     if not text:
         return None
 
@@ -292,7 +471,6 @@ def extract_gpu(text):
         # RTX 4050
         r"\bRTX\s+\d{3,4}(?:\s+(?:Ti|SUPER))?\b",
 
-        # IMPORTANT:
         # NVIDIA GeForce RTX without model number
         r"\bNVIDIA\s+GeForce\s+RTX\b",
 
@@ -314,7 +492,7 @@ def extract_gpu(text):
 
         r"\bRadeon\s+RX\s+\d{3,4}(?:\s+XT)?\b",
 
-        # Intel Arc A770 / A750 etc.
+        # Intel Arc A770 / A750
         r"\bIntel\s+Arc\s+[A-Z]?\d{3,4}\b",
 
         # Intel integrated graphics
@@ -346,7 +524,6 @@ def extract_gpu(text):
 # =========================================================
 
 def extract_cpu(text):
-
     if not text:
         return None
 
@@ -355,16 +532,16 @@ def extract_cpu(text):
     patterns = [
 
         # Intel Core i5 / i7 / i9
-        r"\bIntel\s+Core\s+(?:Ultra\s+)?[iI]\d(?:\s+\d{4,5}[A-Z]*)?\b",
+        r"\bIntel\s+Core\s+(?:Ultra\s+)?[iI]\d(?:\s+\d{4,5}[A-Z]{0,2})?\b",
 
         # Core i5 / i7
-        r"\bCore\s+[iI]\d(?:\s+\d{4,5}[A-Z]*)?\b",
+        r"\bCore\s+[iI]\d(?:\s+\d{4,5}[A-Z]{0,2})?\b",
 
         # AMD Ryzen 5 5600H
-        r"\bAMD\s+Ryzen\s+[3579]\s+\d{4,5}[A-Z]*\b",
+        r"\bAMD\s+Ryzen\s+[3579]\s+\d{4,5}[A-Z]{0,2}\b",
 
         # Ryzen 5 5600H
-        r"\bRyzen\s+[3579]\s+\d{4,5}[A-Z]*\b",
+        r"\bRyzen\s+[3579]\s+\d{4,5}[A-Z]{0,2}\b",
 
         # Apple M1 / M2 / M3 / M4 / M5
         r"\bApple\s+M[1-5](?:\s+(?:Pro|Max|Ultra))?\b",
@@ -389,16 +566,13 @@ def extract_cpu(text):
 # =========================================================
 
 def extract_display(text):
-
     if not text:
         return None
 
     text = str(text)
 
     patterns = [
-
         r"\b(\d{2,3}(?:\.\d+)?)\s*Hz\b",
-
         r"\b(\d{2,3}(?:\.\d+)?)\s*inch\b",
     ]
 
@@ -413,7 +587,6 @@ def extract_display(text):
         )
 
         if match:
-
             found.append(
                 match.group(0).strip()
             )
@@ -429,7 +602,6 @@ def extract_display(text):
 # =========================================================
 
 def extract_brand(text):
-
     if not text:
         return None
 
@@ -481,6 +653,15 @@ def normalize_product(product):
         product
     )
 
+    # Extract once so the same value is used everywhere
+    storage_gb = extract_storage(
+        combined_text
+    )
+
+    ram_gb = extract_ram(
+        combined_text
+    )
+
     normalized = {
 
         "title":
@@ -514,7 +695,9 @@ def normalize_product(product):
         "product_id":
             product.get("product_id"),
 
-        # Extracted specifications
+        # =================================================
+        # EXTRACTED SPECIFICATIONS
+        # =================================================
 
         "brand":
             extract_brand(
@@ -522,14 +705,14 @@ def normalize_product(product):
             ),
 
         "ram_gb":
-            extract_ram(
-                combined_text
-            ),
+            ram_gb,
 
         "storage_gb":
-            extract_storage(
-                combined_text
-            ),
+            storage_gb,
+
+        # Frontend compatibility
+        "storage":
+            storage_gb,
 
         "gpu":
             extract_gpu(
@@ -546,7 +729,10 @@ def normalize_product(product):
                 combined_text
             ),
 
-        # Useful internally
+        # =================================================
+        # USEFUL INTERNALLY
+        # =================================================
+
         "_search_text":
             combined_text,
     }
@@ -697,7 +883,6 @@ def remove_duplicates(products):
             )
 
             # Keep lower valid price
-
             if (
                 new_price is not None
                 and (
@@ -718,3 +903,4 @@ def remove_duplicates(products):
         ),
         duplicates
     )
+    
